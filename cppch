@@ -1,0 +1,27 @@
+#!/bin/bash
+
+mkdir -p .conf
+
+case $1 in
+	"pull")
+		echo "Pulling an assignment #$2"
+		#git clone git@cppprog.db.in.tum.de/assignments/$USER_NAME/a$2
+		echo "Pulled successfully"
+		read -p "Open editor? [y/n]" $yn
+		case $yn in
+			"Yy")
+				$editor a$2
+				exit 0;;
+			"Nn")
+				exit 0;;
+			*)
+				echo "Learn how to type... I said clearly y or n!"
+				exit 418;; #if you know you know
+		esac
+		;;
+	"test")
+		
+		;;
+	*)
+		echo "Invalid option";;
+esac
