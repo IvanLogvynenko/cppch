@@ -1,18 +1,105 @@
 #!/bin/bash
 
-mkdir -p .conf
+################################################################
+###							CPPCH							 ###
+###										By WR				 ###
+################################################################
+print_help() {
+	echo -e "Usage: \thelp - print this message"
+	echo -e "\tpull <assignment number> - pulls and sets up a new assignment"
+	echo -e "\ttest <path/to/dir[default current dir]> - launches docker test"
+	echo -e "\tpush <commit message[default=new commit]. <path/to/dir[default=current dir]> - tidies and \n\t\t\tpushes the assignment and lastly polls the result from server"
+	echo ""
+}
+
+# Set the configuration directory
+CPPCH_CONF="${CPPCH_CONF:-$(pwd)}"
+
+if [[ ! -f "$CPPCH_CONF/.conf/config.sh" ]]; then
+	mkdir -p $CPPCH_CONF/.conf
+	touch $CPPCH_CONF/.conf/config.sh
+	echo "First launch! Configuring..."
+	sleep 3 # pretend to do something very important
+
+	# Ask for username and write it to config.sh
+	read -p "Enter your tum username: " username
+	echo "USER_NAME=$username" >> $CPPCH_CONF/.conf/config.sh
+
+	# Determine the shell config file
+	shell_name="$(basename $SHELL)"
+	read -p "Autodefined path to rc file is ~/.${shell_name}rc. Is that right? [y/n]? " yn
+	case $yn in 
+		[yY])
+			shell_config="$HOME/.${shell_name}rc"
+			unset yn
+			;;
+		[nN])
+			read -p "Enter path to your shell config: " shell_config
+			unset yn
+			;;
+		*) 
+			rm -rf .conf
+			echo "Invalid option. Start over"
+			exit 1;;
+	esac
+
+	# Add current directory to the shell config file
+	echo "Adding myself to your $shell_config file"
+
+	echo "" >> "$shell_config"
+	echo "#######################################" >> "$shell_config"
+	echo "###         Created by cppch        ###" >> "$shell_config"
+	echo "#######################################" >> "$shell_config"
+
+	echo "export PATH=\"\$PATH:$(pwd)\"" >> "$shell_config"
+	echo "export CPPCH_CONF=\"$(pwd)\"" >> "$shell_config"
+	echo "export CPPCH_TEMPLATES=\"$(pwd)/.templates\"" >> "$shell_config"
+	echo "" >> "$shell_config"
+
+	# Prompt for assignment directory, defaulting to current dir
+	read -p "Enter dir to clone assignment to: (default=$(pwd)) " CPP_ASSIGNMENT_DIR
+	CPP_ASSIGNMENT_DIR=${CPP_ASSIGNMENT_DIR:-$(pwd)}
+	echo "CPP_ASSIGNMENT_DIR=${CPP_ASSIGNMENT_DIR}" >> $CPPCH_CONF/.conf/config.sh
+
+	#setting default editor 
+	read -p "Enter your default editor(default=nvim): " editor
+	editor=${editor:-nvim}
+	echo "EDITOR=${editor}" >> $CPPCH_CONF/.conf/config.sh
+
+	echo "You should be all set."
+	echo "Proceeding..."
+fi
+
+source $CPPCH_CONF/.conf/config.sh
 
 case $1 in
 	"pull")
 		echo "Pulling an assignment #$2"
-		#git clone git@cppprog.db.in.tum.de/assignments/$USER_NAME/a$2
+		mkdir -p $CPP_ASSIGNMENT_DIR
+		git clone "git@cppprog.db.in.tum.de:assignments/$USER_NAME/a$2" "$CPP_ASSIGNMENT_DIR/a$2"
 		echo "Pulled successfully"
-		read -p "Open editor? [y/n]" $yn
+
+		if [[ ! -f $CPP_ASSIGNMENT_DIR/CMakeLists.txt ]]; then 
+			echo "Adding default CMakeLists.txt"
+			cp $CPPCH_TEMPLATES/CMakeLists.txt $CPP_ASSIGNMENT_DIR/a$2/CMakeLists.txt
+		fi
+
+		if [[ ! -f $CPP_ASSIGNMENT_DIR/Dockerfile ]]; then 
+			echo "Adding default Dockerfile"
+			cp $CPPCH_TEMPLATES/Dockerfile $CPP_ASSIGNMENT_DIR/a$2/Dockerfile
+		fi
+
+		if [[ ! -f $CPP_ASSIGNMENT_DIR/main.cpp ]]; then 
+			echo "Adding default main.cpp"
+			cp $CPPCH_TEMPLATES/main.cpp $CPP_ASSIGNMENT_DIR/a$2/main.cpp
+		fi
+
+		read -p "Open editor? [y/n] " yn
 		case $yn in
-			"Yy")
-				$editor a$2
+			[yY])
+				$EDITOR "$CPP_ASSIGNMENT_DIR/a$2"
 				exit 0;;
-			"Nn")
+			[nN])
 				exit 0;;
 			*)
 				echo "Learn how to type... I said clearly y or n!"
@@ -20,8 +107,35 @@ case $1 in
 		esac
 		;;
 	"test")
-		
+		workdir=${3:-$(pwd)}
+		cd $workdir
+		docker build -t cpp_testing_container . > /dev/null
+		docker run -t cpp_testing_container
+		;;
+	"push")
+		commit_msg=${2:-"new commit"}
+		workdir=${3:-$(pwd)}
+		cd "${workdir}" || exit
+		clang-format -i ./*.cpp > /dev/null
+		git add . > /dev/null
+		git commit -m"$commit_msg" > /dev/null
+		git push > /dev/null
+
+		current_dir_name=$(basename "$PWD")
+		while true; do
+			# Execute the SSH command and capture the output
+			output=$(ssh git@cppprog.db.in.tum.de points)
+
+			# Check if the output contains the current directory name
+			if [[ "$output" == *"$current_dir_name"* ]]; then
+				echo $output | grep "$current_dir_name"
+				exit 0
+			else
+				echo "Polling..."
+				sleep 1
+			fi
+		done
 		;;
 	*)
-		echo "Invalid option";;
+		print_help;;
 esac
