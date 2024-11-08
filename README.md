@@ -11,10 +11,18 @@ Terminal in any Unix-like system (**Linux**, **Mac** **Os**, **WSL**)
 # Setup
 
 Well, clone the repo. 
-`git clone domainName: folder/<your username>/assignmentName`
+```bash
+git clone https://github.com/IvanLogvynenko/cppch
+```
 Then cd in the repo.
-`cd assignmentName`
-Then run the only `.sh` file you see here. Follow the instructions...
+```bash
+cd cppch
+```
+Then run the only `.sh` file you see here. 
+```bash
+./cppch
+```
+Follow the instructions...
 All requested data will be (hopefully) stored in the cloned repo in `.conf`
 
 So don't worry about your data being saved, it is just a file on YOUR pc.
