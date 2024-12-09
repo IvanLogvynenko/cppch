@@ -115,7 +115,7 @@ case $1 in
             output=$(ssh git@cppprog.db.in.tum.de points)
 
             # Check if the output contains the current directory name
-            if [[ "$output" == *"$current_dir_name  | 1"* || "$output" == *"$current_dir_name  | 2"*]]; then
+            if [[ "$output" == *"$current_dir_name  | 1"* || "$output" == *"$current_dir_name  | 2"* ]]; then
                 echo "$output" | grep "$current_dir_name"
                 exit 0
             else
