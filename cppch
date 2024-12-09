@@ -82,19 +82,6 @@ case $1 in
         git clone "git@cppprog.db.in.tum.de:assignments/$USER_NAME/a$2" "$CPP_ASSIGNMENT_DIR/a$2"
         echo "Pulled successfully"
 
-        # Add default files if they do not exist
-        [[ ! -f "$CPP_ASSIGNMENT_DIR/a$2/CMakeLists.txt" ]] && \
-            echo "Adding default CMakeLists.txt" && \
-            cp "$CPPCH_TEMPLATES/CMakeLists.txt" "$CPP_ASSIGNMENT_DIR/a$2/CMakeLists.txt"
-
-        [[ ! -f "$CPP_ASSIGNMENT_DIR/a$2/Dockerfile" ]] && \
-            echo "Adding default Dockerfile" && \
-            cp "$CPPCH_TEMPLATES/Dockerfile" "$CPP_ASSIGNMENT_DIR/a$2/Dockerfile"
-
-        [[ ! -f "$CPP_ASSIGNMENT_DIR/a$2/main.cpp" ]] && \
-            echo "Adding default main.cpp" && \
-            cp "$CPPCH_TEMPLATES/main.cpp" "$CPP_ASSIGNMENT_DIR/a$2/main.cpp"
-
         read -p "Open editor? [y/n] " yn
         case $yn in
             [yY])
@@ -111,8 +98,7 @@ case $1 in
     "test")
         workdir=${3:-$(pwd)}
         cd "$workdir" || exit
-        docker build -t cpp_testing_container . > /dev/null
-        docker run -t cpp_testing_container
+        ./eval.sh
         ;;
     "push")
         commit_msg=${2:-"new commit"}
@@ -129,7 +115,7 @@ case $1 in
             output=$(ssh git@cppprog.db.in.tum.de points)
 
             # Check if the output contains the current directory name
-            if [[ "$output" == *"$current_dir_name"* ]]; then
+            if [[ "$output" == *"$current_dir_name  | 1"* || "$output" == *"$current_dir_name  | 2"*]]; then
                 echo "$output" | grep "$current_dir_name"
                 exit 0
             else
@@ -137,6 +123,9 @@ case $1 in
                 sleep 2.5
             fi
         done
+        ;;
+    "open")
+        $EDITOR "$CPP_ASSIGNMENT_DIR/a$2"
         ;;
     *)
         print_help
